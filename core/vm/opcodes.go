@@ -219,6 +219,12 @@ const (
 	SELFDESTRUCT OpCode = 0xff
 )
 
+// 0xc0 - ISCP
+const (
+	ISCPEVENT OpCode = 0xc0 + iota
+	ISCPENTROPY
+)
+
 // Since the opcodes aren't all in order we can't use a regular slice.
 var opCodeToString = map[OpCode]string{
 	// 0x0 range - arithmetic ops.
@@ -371,6 +377,10 @@ var opCodeToString = map[OpCode]string{
 	LOG2:   "LOG2",
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
+
+	// ISCP
+	ISCPEVENT:   "ISCPEVENT",
+	ISCPENTROPY: "ISCPENTROPY",
 
 	// 0xf0 range.
 	CREATE:       "CREATE",
@@ -533,6 +543,8 @@ var stringToOp = map[string]OpCode{
 	"LOG2":           LOG2,
 	"LOG3":           LOG3,
 	"LOG4":           LOG4,
+	"ISCPEVENT":      ISCPEVENT,
+	"ISCPENTROPY":    ISCPENTROPY,
 	"CREATE":         CREATE,
 	"CREATE2":        CREATE2,
 	"CALL":           CALL,

@@ -174,3 +174,33 @@ func opBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]
 	scope.Stack.push(baseFee)
 	return nil, nil
 }
+
+type ISCPBackend interface {
+	Event(s string)
+	Entropy() [32]byte
+}
+
+// enableISCP adds the ISCP opcode
+func enableISCP(jt *JumpTable, backend func() ISCPBackend) {
+	jt[ISCPEVENT] = &operation{
+		execute: func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+			offset, size := scope.Stack.pop(), scope.Stack.peek()
+			data := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
+			backend().Event(string(data))
+			return nil, nil
+		},
+		constantGas: GasQuickStep,
+		minStack:    minStack(2, 0),
+		maxStack:    maxStack(2, 0),
+	}
+	jt[ISCPENTROPY] = &operation{
+		execute: func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+			entropy := backend().Entropy()
+			scope.Stack.push(uint256.NewInt(0).SetBytes32(entropy[:]))
+			return nil, nil
+		},
+		constantGas: GasQuickStep,
+		minStack:    minStack(0, 1),
+		maxStack:    maxStack(0, 1),
+	}
+}

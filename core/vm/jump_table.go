@@ -72,6 +72,14 @@ func newLondonInstructionSet() JumpTable {
 	return instructionSet
 }
 
+// NewISCPInstructionSet returns the frontier, homestead, byzantium,
+// contantinople, istanbul, petersburg, berlin and IEVM instructions.
+func NewISCPInstructionSet(backend func() ISCPBackend) JumpTable {
+	instructionSet := newBerlinInstructionSet()
+	enableISCP(&instructionSet, backend)
+	return instructionSet
+}
+
 // newBerlinInstructionSet returns the frontier, homestead, byzantium,
 // contantinople, istanbul, petersburg and berlin instructions.
 func newBerlinInstructionSet() JumpTable {
