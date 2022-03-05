@@ -114,8 +114,6 @@ type EVM struct {
 	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
 	interpreter *EVMInterpreter
-	// iscContract is the interpreter for the special system contract at ISCAddress
-	iscContract ISCContract
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort int32
@@ -137,13 +135,6 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		chainRules:  chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil),
 	}
 	evm.interpreter = NewEVMInterpreter(evm, config)
-	return evm
-}
-
-// NewISCEVM returns a new EVM with ISC extensions enabled
-func NewISCEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config, iscContract ISCContract) *EVM {
-	evm := NewEVM(blockCtx, txCtx, statedb, chainConfig, config)
-	evm.iscContract = iscContract
 	return evm
 }
 
@@ -220,8 +211,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 	}
 
-	if evm.iscContract != nil && addr == ISCAddress {
-		ret, gas = evm.iscContract.Run(evm, caller, input, gas, false)
+	if evm.Config.ISCContract != nil && addr == ISCAddress {
+		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
@@ -284,8 +275,8 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		}(gas)
 	}
 
-	if evm.iscContract != nil && addr == ISCAddress {
-		ret, gas = evm.iscContract.Run(evm, caller, input, gas, false)
+	if evm.Config.ISCContract != nil && addr == ISCAddress {
+		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -327,8 +318,8 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 		}(gas)
 	}
 
-	if evm.iscContract != nil && addr == ISCAddress {
-		ret, gas = evm.iscContract.Run(evm, caller, input, gas, false)
+	if evm.Config.ISCContract != nil && addr == ISCAddress {
+		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -379,8 +370,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		}(gas)
 	}
 
-	if evm.iscContract != nil && addr == ISCAddress {
-		ret, gas = evm.iscContract.Run(evm, caller, input, gas, true)
+	if evm.Config.ISCContract != nil && addr == ISCAddress {
+		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, true)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
