@@ -6,5 +6,5 @@ import "github.com/ethereum/go-ethereum/common"
 var ISCAddress = common.HexToAddress("0x1074")
 
 type ISCContract interface {
-	Run(evm *EVM, caller ContractRef, input []byte, gas uint64, readOnly bool) ([]byte, uint64)
+	Run(evm *EVM, caller ContractRef, input []byte, gas uint64, readOnly bool) ([]byte, uint64, error)
 }
