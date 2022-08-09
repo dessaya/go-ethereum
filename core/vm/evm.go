@@ -212,7 +212,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if evm.Config.ISCContract != nil && addr == ISCAddress {
-		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
@@ -265,7 +265,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance
 	}
-	var snapshot = evm.StateDB.Snapshot()
+	snapshot := evm.StateDB.Snapshot()
 
 	// Invoke tracer hooks that signal entering/exiting a call frame
 	if evm.Config.Debug {
@@ -276,7 +276,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	}
 
 	if evm.Config.ISCContract != nil && addr == ISCAddress {
-		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -308,7 +308,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
-	var snapshot = evm.StateDB.Snapshot()
+	snapshot := evm.StateDB.Snapshot()
 
 	// Invoke tracer hooks that signal entering/exiting a call frame
 	if evm.Config.Debug {
@@ -319,7 +319,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	}
 
 	if evm.Config.ISCContract != nil && addr == ISCAddress {
-		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.ISCContract.Run(evm, caller, input, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -354,7 +354,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// after all empty accounts were deleted, so this is not required. However, if we omit this,
 	// then certain tests start failing; stRevertTest/RevertPrecompiledTouchExactOOG.json.
 	// We could change this, but for now it's left for legacy reasons
-	var snapshot = evm.StateDB.Snapshot()
+	snapshot := evm.StateDB.Snapshot()
 
 	// We do an AddBalance of zero here, just in order to trigger a touch.
 	// This doesn't matter on Mainnet, where all empties are gone at the time of Byzantium,
@@ -371,7 +371,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	}
 
 	if evm.Config.ISCContract != nil && addr == ISCAddress {
-		ret, gas = evm.Config.ISCContract.Run(evm, caller, input, gas, true)
+		ret, gas, err = evm.Config.ISCContract.Run(evm, caller, input, gas, true)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
