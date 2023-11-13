@@ -220,7 +220,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
-		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, value, gas, false)
 	} else if isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
@@ -284,7 +284,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	}
 
 	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
-		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, value, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -331,7 +331,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	}
 
 	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
-		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, gas, false)
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, big.NewInt(0), gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -383,7 +383,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	}
 
 	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
-		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, gas, true)
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, big0, gas, true)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
