@@ -331,7 +331,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	}
 
 	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
-		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, big.NewInt(0), gas, false)
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, big0, gas, false)
 	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
