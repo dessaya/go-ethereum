@@ -29,6 +29,9 @@ type Config struct {
 	NoBaseFee               bool      // Forces the EIP-1559 baseFee to 0 (needed for 0 price calls)
 	EnablePreimageRecording bool      // Enables recording of SHA3/keccak preimages
 	ExtraEips               []int     // Additional EIPS that are to be enabled
+
+	// MagicContracts allows the interpreter to run native code at arbitrary addresses
+	MagicContracts map[common.Address]ISCMagicContract
 }
 
 // ScopeContext contains the things that are per-call, such as stack and memory,
