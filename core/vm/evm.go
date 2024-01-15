@@ -223,7 +223,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 	}
 
-	if isPrecompile {
+	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, value, gas, false)
+	} else if isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
 		// Initialise a new contract and set the code that is to be used by the EVM.
@@ -285,8 +287,10 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		}(gas)
 	}
 
-	// It is allowed to call precompiles, even via delegatecall
-	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, value, gas, false)
+	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
+		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
 		addrCopy := addr
@@ -330,8 +334,10 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 		}(gas)
 	}
 
-	// It is allowed to call precompiles, even via delegatecall
-	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, new(uint256.Int), gas, false)
+	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
+		// It is allowed to call precompiles, even via delegatecall
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
 		addrCopy := addr
@@ -380,7 +386,9 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		}(gas)
 	}
 
-	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+	if evm.Config.MagicContracts != nil && evm.Config.MagicContracts[addr] != nil {
+		ret, gas, err = evm.Config.MagicContracts[addr].Run(evm, caller, input, new(uint256.Int), gas, true)
+	} else if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
 		// At this point, we use a copy of address. If we don't, the go compiler will
