@@ -40,7 +40,7 @@ type sigCache struct {
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int, blockTime uint64) Signer {
 	var signer Signer
 	switch {
-	case config.IsCancun(blockTime):
+	case config.IsCancun(blockNumber, blockTime):
 		signer = NewCancunSigner(config.ChainID)
 	case config.IsLondon(blockNumber):
 		signer = NewLondonSigner(config.ChainID)
@@ -57,9 +57,9 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int, blockTime uint
 }
 
 // LatestSigner returns the 'most permissive' Signer available for the given chain
-// configuration. Specifically, this enables support of EIP-155 replay protection and
-// EIP-2930 access list transactions when their respective forks are scheduled to occur at
-// any block number in the chain config.
+// configuration. Specifically, this enables support of all types of transactions
+// when their respective forks are scheduled to occur at any block number (or time)
+// in the chain config.
 //
 // Use this in transaction-handling code where the current block number is unknown. If you
 // have the current block number available, use MakeSigner instead.
@@ -107,13 +107,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 
 // SignNewTx creates a transaction and signs it.
 func SignNewTx(prv *ecdsa.PrivateKey, s Signer, txdata TxData) (*Transaction, error) {
-	tx := NewTx(txdata)
-	h := s.Hash(tx)
-	sig, err := crypto.Sign(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return tx.WithSignature(s, sig)
+	return SignTx(NewTx(txdata), s, prv)
 }
 
 // MustSignNewTx creates a transaction and signs it.
@@ -134,8 +128,7 @@ func MustSignNewTx(prv *ecdsa.PrivateKey, s Signer, txdata TxData) *Transaction 
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	if sc := tx.from.Load(); sc != nil {
-		sigCache := sc.(sigCache)
+	if sigCache := tx.from.Load(); sigCache != nil {
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
 		// the cache.
@@ -148,7 +141,7 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
-	tx.from.Store(sigCache{signer: signer, from: addr})
+	tx.from.Store(&sigCache{signer: signer, from: addr})
 	return addr, nil
 }
 
@@ -331,11 +324,7 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 	V, R, S := tx.RawSignatureValues()
 	switch tx.Type() {
 	case LegacyTxType:
-		if !tx.Protected() {
-			return HomesteadSigner{}.Sender(tx)
-		}
-		V = new(big.Int).Sub(V, s.chainIdMul)
-		V.Sub(V, big8)
+		return s.EIP155Signer.Sender(tx)
 	case AccessListTxType:
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
@@ -372,15 +361,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 	switch tx.Type() {
 	case LegacyTxType:
-		return rlpHash([]interface{}{
-			tx.Nonce(),
-			tx.GasPrice(),
-			tx.Gas(),
-			tx.To(),
-			tx.Value(),
-			tx.Data(),
-			s.chainId, uint(0), uint(0),
-		})
+		return s.EIP155Signer.Hash(tx)
 	case AccessListTxType:
 		return prefixedRlpHash(
 			tx.Type(),
@@ -478,11 +459,11 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 // homestead rules.
 type HomesteadSigner struct{ FrontierSigner }
 
-func (s HomesteadSigner) ChainID() *big.Int {
+func (hs HomesteadSigner) ChainID() *big.Int {
 	return nil
 }
 
-func (s HomesteadSigner) Equal(s2 Signer) bool {
+func (hs HomesteadSigner) Equal(s2 Signer) bool {
 	_, ok := s2.(HomesteadSigner)
 	return ok
 }
@@ -505,11 +486,11 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 // frontier rules.
 type FrontierSigner struct{}
 
-func (s FrontierSigner) ChainID() *big.Int {
+func (fs FrontierSigner) ChainID() *big.Int {
 	return nil
 }
 
-func (s FrontierSigner) Equal(s2 Signer) bool {
+func (fs FrontierSigner) Equal(s2 Signer) bool {
 	_, ok := s2.(FrontierSigner)
 	return ok
 }

@@ -17,7 +17,8 @@
 package discover
 
 import (
-	"net"
+	"fmt"
+	"net/netip"
 
 	"github.com/ethereum/go-ethereum/metrics"
 )
@@ -32,11 +33,18 @@ const (
 )
 
 var (
+	bucketsCounter      []metrics.Counter
 	ingressTrafficMeter = metrics.NewRegisteredMeter(ingressMeterName, nil)
 	egressTrafficMeter  = metrics.NewRegisteredMeter(egressMeterName, nil)
 )
 
-// meteredConn is a wrapper around a net.UDPConn that meters both the
+func init() {
+	for i := 0; i < nBuckets; i++ {
+		bucketsCounter = append(bucketsCounter, metrics.NewRegisteredCounter(fmt.Sprintf("%s/bucket/%d/count", moduleName, i), nil))
+	}
+}
+
+// meteredUdpConn is a wrapper around a net.UDPConn that meters both the
 // inbound and outbound network traffic.
 type meteredUdpConn struct {
 	UDPConn
@@ -50,16 +58,16 @@ func newMeteredConn(conn UDPConn) UDPConn {
 	return &meteredUdpConn{UDPConn: conn}
 }
 
-// Read delegates a network read to the underlying connection, bumping the udp ingress traffic meter along the way.
-func (c *meteredUdpConn) ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error) {
-	n, addr, err = c.UDPConn.ReadFromUDP(b)
+// ReadFromUDPAddrPort delegates a network read to the underlying connection, bumping the udp ingress traffic meter along the way.
+func (c *meteredUdpConn) ReadFromUDPAddrPort(b []byte) (n int, addr netip.AddrPort, err error) {
+	n, addr, err = c.UDPConn.ReadFromUDPAddrPort(b)
 	ingressTrafficMeter.Mark(int64(n))
 	return n, addr, err
 }
 
-// Write delegates a network write to the underlying connection, bumping the udp egress traffic meter along the way.
-func (c *meteredUdpConn) WriteToUDP(b []byte, addr *net.UDPAddr) (n int, err error) {
-	n, err = c.UDPConn.WriteToUDP(b, addr)
+// WriteToUDP delegates a network write to the underlying connection, bumping the udp egress traffic meter along the way.
+func (c *meteredUdpConn) WriteToUDP(b []byte, addr netip.AddrPort) (n int, err error) {
+	n, err = c.UDPConn.WriteToUDPAddrPort(b, addr)
 	egressTrafficMeter.Mark(int64(n))
 	return n, err
 }

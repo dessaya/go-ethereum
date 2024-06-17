@@ -47,8 +47,8 @@ func ckzgInit() {
 	if err = gokzg4844.CheckTrustedSetupIsWellFormed(params); err != nil {
 		panic(err)
 	}
-	g1s := make([]byte, len(params.SetupG1)*(len(params.SetupG1[0])-2)/2)
-	for i, g1 := range params.SetupG1 {
+	g1s := make([]byte, len(params.SetupG1Lagrange)*(len(params.SetupG1Lagrange[0])-2)/2)
+	for i, g1 := range params.SetupG1Lagrange {
 		copy(g1s[i*(len(g1)-2)/2:], hexutil.MustDecode(g1))
 	}
 	g2s := make([]byte, len(params.SetupG2)*(len(params.SetupG2[0])-2)/2)
@@ -61,10 +61,10 @@ func ckzgInit() {
 }
 
 // ckzgBlobToCommitment creates a small commitment out of a data blob.
-func ckzgBlobToCommitment(blob Blob) (Commitment, error) {
+func ckzgBlobToCommitment(blob *Blob) (Commitment, error) {
 	ckzgIniter.Do(ckzgInit)
 
-	commitment, err := ckzg4844.BlobToKZGCommitment((ckzg4844.Blob)(blob))
+	commitment, err := ckzg4844.BlobToKZGCommitment((*ckzg4844.Blob)(blob))
 	if err != nil {
 		return Commitment{}, err
 	}
@@ -73,8 +73,10 @@ func ckzgBlobToCommitment(blob Blob) (Commitment, error) {
 
 // ckzgComputeProof computes the KZG proof at the given point for the polynomial
 // represented by the blob.
-func ckzgComputeProof(blob Blob, point Point) (Proof, Claim, error) {
-	proof, claim, err := ckzg4844.ComputeKZGProof((ckzg4844.Blob)(blob), (ckzg4844.Bytes32)(point))
+func ckzgComputeProof(blob *Blob, point Point) (Proof, Claim, error) {
+	ckzgIniter.Do(ckzgInit)
+
+	proof, claim, err := ckzg4844.ComputeKZGProof((*ckzg4844.Blob)(blob), (ckzg4844.Bytes32)(point))
 	if err != nil {
 		return Proof{}, Claim{}, err
 	}
@@ -84,6 +86,8 @@ func ckzgComputeProof(blob Blob, point Point) (Proof, Claim, error) {
 // ckzgVerifyProof verifies the KZG proof that the polynomial represented by the blob
 // evaluated at the given point is the claimed value.
 func ckzgVerifyProof(commitment Commitment, point Point, claim Claim, proof Proof) error {
+	ckzgIniter.Do(ckzgInit)
+
 	valid, err := ckzg4844.VerifyKZGProof((ckzg4844.Bytes48)(commitment), (ckzg4844.Bytes32)(point), (ckzg4844.Bytes32)(claim), (ckzg4844.Bytes48)(proof))
 	if err != nil {
 		return err
@@ -98,8 +102,10 @@ func ckzgVerifyProof(commitment Commitment, point Point, claim Claim, proof Proo
 // the commitment.
 //
 // This method does not verify that the commitment is correct with respect to blob.
-func ckzgComputeBlobProof(blob Blob, commitment Commitment) (Proof, error) {
-	proof, err := ckzg4844.ComputeBlobKZGProof((ckzg4844.Blob)(blob), (ckzg4844.Bytes48)(commitment))
+func ckzgComputeBlobProof(blob *Blob, commitment Commitment) (Proof, error) {
+	ckzgIniter.Do(ckzgInit)
+
+	proof, err := ckzg4844.ComputeBlobKZGProof((*ckzg4844.Blob)(blob), (ckzg4844.Bytes48)(commitment))
 	if err != nil {
 		return Proof{}, err
 	}
@@ -107,8 +113,10 @@ func ckzgComputeBlobProof(blob Blob, commitment Commitment) (Proof, error) {
 }
 
 // ckzgVerifyBlobProof verifies that the blob data corresponds to the provided commitment.
-func ckzgVerifyBlobProof(blob Blob, commitment Commitment, proof Proof) error {
-	valid, err := ckzg4844.VerifyBlobKZGProof((ckzg4844.Blob)(blob), (ckzg4844.Bytes48)(commitment), (ckzg4844.Bytes48)(proof))
+func ckzgVerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
+	ckzgIniter.Do(ckzgInit)
+
+	valid, err := ckzg4844.VerifyBlobKZGProof((*ckzg4844.Blob)(blob), (ckzg4844.Bytes48)(commitment), (ckzg4844.Bytes48)(proof))
 	if err != nil {
 		return err
 	}
